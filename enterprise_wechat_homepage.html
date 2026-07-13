@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>企业微信工作台</title>
+    <!-- 企业微信 JS-SDK -->
+    <script src="https://res.wx.qq.com/open/js/jweixin-1.2.0.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f6f7;
+            color: #333;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 顶部用户信息 */
+        .header {
+            background: linear-gradient(135deg, #2f7dff 0%, #1e5fd9 100%);
+            padding: 40px 20px 60px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 150px;
+            height: 150px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 50%;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        .avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #2f7dff;
+            font-weight: bold;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+        .user-detail h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .user-detail p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        /* 快捷数据卡片 */
+        .stats-bar {
+            display: flex;
+            gap: 12px;
+            padding: 0 16px;
+            margin-top: -30px;
+            position: relative;
+            z-index: 2;
+        }
+        .stat-card {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            text-align: center;
+        }
+        .stat-card .num {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2f7dff;
+            line-height: 1;
+        }
+        .stat-card .label {
+            font-size: 12px;
+            color: #999;
+            margin-top: 6px;
+        }
+
+        /* 应用网格 */
+        .section {
+            background: white;
+            margin: 12px 16px;
+            border-radius: 12px;
+            padding: 20px 16px;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .section-title .more {
+            font-size: 13px;
+            color: #999;
+            font-weight: normal;
+        }
+
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px 8px;
+        }
+        .app-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            padding: 8px 0;
+            border-radius: 8px;
+        }
+        .app-item:active {
+            transform: scale(0.95);
+            background: #f5f6f7;
+        }
+        .app-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            position: relative;
+        }
+        .app-icon .badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ff4d4f;
+            color: white;
+            font-size: 11px;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+            font-weight: 600;
+        }
+        .app-name {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+
+        /* 应用图标颜色 */
+        .icon-blue { background: linear-gradient(135deg, #e6f0ff, #d4e5ff); }
+        .icon-green { background: linear-gradient(135deg, #e6f7ed, #d4edda); }
+        .icon-orange { background: linear-gradient(135deg, #fff2e8, #ffe4d1); }
+        .icon-purple { background: linear-gradient(135deg, #f0e6ff, #e4d1ff); }
+        .icon-red { background: linear-gradient(135deg, #fff1f0, #ffd1d1); }
+        .icon-cyan { background: linear-gradient(135deg, #e6fffb, #d1f5f0); }
+        .icon-yellow { background: linear-gradient(135deg, #fffbe6, #fff1d1); }
+        .icon-gray { background: linear-gradient(135deg, #f5f5f5, #e8e8e8); }
+
+        /* 待办列表 */
+        .todo-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #fafafa;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .todo-item:active {
+            background: #f0f0f0;
+        }
+        .todo-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .dot-urgent { background: #ff4d4f; }
+        .dot-normal { background: #2f7dff; }
+        .dot-done { background: #52c41a; }
+        .todo-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .todo-title {
+            font-size: 14px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .todo-meta {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+        .todo-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .tag-urgent { background: #fff1f0; color: #ff4d4f; }
+        .tag-normal { background: #e6f0ff; color: #2f7dff; }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 20px;
+            border-top: 1px solid #f0f0f0;
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            color: #999;
+            font-size: 11px;
+            padding: 4px 16px;
+        }
+        .nav-item.active {
+            color: #2f7dff;
+        }
+        .nav-icon {
+            font-size: 24px;
+        }
+
+        /* 公告横幅 */
+        .notice-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(90deg, #fffbe6, #fff1d1);
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #d48806;
+        }
+        .notice-bar .icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .notice-bar .text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 底部留白 */
+        .safe-bottom {
+            height: 80px;
+        }
+
+        /* 动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .section {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        /* 加载状态 */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f0f0f0;
+            border-top-color: #2f7dff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载状态 -->
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- 顶部用户信息 -->
+    <div class="header">
+        <div class="user-info">
+            <div class="avatar" id="userAvatar">张</div>
+            <div class="user-detail">
+                <h2 id="userName">张三</h2>
+                <p id="userDept">技术部 · 高级工程师</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快捷数据 -->
+    <div class="stats-bar">
+        <div class="stat-card" onclick="openApp('https://work.weixin.qq.com/wework_admin/approval')">
+            <div class="num" id="todoCount">12</div>
+            <div class="label">待办事项</div>
+        </div>
+        <div class="stat-card" onclick="openApp('https://work.weixin.qq.com/wework_admin/message')">
+            <div class="num" id="msgCount">5</div>
+            <div class="label">未读消息</div>
+        </div>
+        <div class="stat-card" onclick="openApp('https://work.weixin.qq.com/wework_admin/approval')">
+            <div class="num" id="approvalCount">3</div>
+            <div class="label">审批中</div>
+        </div>
+    </div>
+
+    <!-- 常用应用 -->
+    <div class="section">
+        <div class="notice-bar" id="noticeBar">
+            <span class="icon">📢</span>
+            <span class="text" id="noticeText">本周五下午3点召开全员技术分享会，请准时参加</span>
+        </div>
+
+        <div class="section-title">
+            常用应用
+            <span class="more" onclick="openApp('https://work.weixin.qq.com/wework_admin/app')">全部 ></span>
+        </div>
+        <div class="app-grid">
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/approval')">
+                <div class="app-icon icon-blue">
+                    📋
+                    <span class="badge" id="badgeApproval">3</span>
+                </div>
+                <span class="app-name">审批</span>
+            </div>
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/checkin')">
+                <div class="app-icon icon-green">⏰</div>
+                <span class="app-name">考勤打卡</span>
+            </div>
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/daily')">
+                <div class="app-icon icon-orange">📝</div>
+                <span class="app-name">工作日报</span>
+            </div>
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/meeting')">
+                <div class="app-icon icon-purple">🏢</div>
+                <span class="app-name">会议室</span>
+            </div>
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/expense')">
+                <div class="app-icon icon-red">
+                    💰
+                    <span class="badge" id="badgeExpense">1</span>
+                </div>
+                <span class="app-name">费用报销</span>
+            </div>
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/wiki')">
+                <div class="app-icon icon-cyan">📚</div>
+                <span class="app-name">知识库</span>
+            </div>
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/contacts')">
+                <div class="app-icon icon-yellow">👥</div>
+                <span class="app-name">通讯录</span>
+            </div>
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/app')">
+                <div class="app-icon icon-gray">⋮</div>
+                <span class="app-name">更多</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 办公应用 -->
+    <div class="section">
+        <div class="section-title">
+            办公应用
+            <span class="more" onclick="openApp('https://work.weixin.qq.com/wework_admin/app')">全部 ></span>
+        </div>
+        <div class="app-grid">
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/mail')">
+                <div class="app-icon icon-blue">
+                    ✉️
+                    <span class="badge" id="badgeMail">5</span>
+                </div>
+                <span class="app-name">企业邮箱</span>
+            </div>
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/drive')">
+                <div class="app-icon icon-cyan">☁️</div>
+                <span class="app-name">微盘</span>
+            </div>
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/calendar')">
+                <div class="app-icon icon-purple">📅</div>
+                <span class="app-name">日程</span>
+            </div>
+            <div class="app-item" onclick="openApp('https://work.weixin.qq.com/wework_admin/announce')">
+                <div class="app-icon icon-yellow">📣</div>
+                <span class="app-name">公告</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 待办事项 -->
+    <div class="section">
+        <div class="section-title">
+            我的待办
+            <span class="more" onclick="openApp('https://work.weixin.qq.com/wework_admin/todo')">查看全部 ></span>
+        </div>
+        <div class="todo-list" id="todoList">
+            <div class="todo-item" onclick="openTodo('https://work.weixin.qq.com/wework_admin/todo/1')">
+                <div class="todo-dot dot-urgent"></div>
+                <div class="todo-content">
+                    <div class="todo-title">Q3项目需求评审会议</div>
+                    <div class="todo-meta">今天 14:00 · 会议室A</div>
+                </div>
+                <span class="todo-tag tag-urgent">紧急</span>
+            </div>
+            <div class="todo-item" onclick="openTodo('https://work.weixin.qq.com/wework_admin/todo/2')">
+                <div class="todo-dot dot-normal"></div>
+                <div class="todo-content">
+                    <div class="todo-title">提交本周工作周报</div>
+                    <div class="todo-meta">截止今天 18:00</div>
+                </div>
+                <span class="todo-tag tag-normal">待办</span>
+            </div>
+            <div class="todo-item" onclick="openTodo('https://work.weixin.qq.com/wework_admin/todo/3')">
+                <div class="todo-dot dot-normal"></div>
+                <div class="todo-content">
+                    <div class="todo-title">审批-李四的请假申请</div>
+                    <div class="todo-meta">请假时间：7月12日-7月14日</div>
+                </div>
+                <span class="todo-tag tag-normal">审批</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部安全区 -->
+    <div class="safe-bottom"></div>
+
+    <!-- 底部导航 -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab(this, 'home')">
+            <span class="nav-icon">🏠</span>
+            <span>首页</span>
+        </div>
+        <div class="nav-item" onclick="switchTab(this, 'msg')">
+            <span class="nav-icon">💬</span>
+            <span>消息</span>
+        </div>
+        <div class="nav-item" onclick="switchTab(this, 'work')">
+            <span class="nav-icon">📁</span>
+            <span>工作台</span>
+        </div>
+        <div class="nav-item" onclick="switchTab(this, 'me')">
+            <span class="nav-icon">👤</span>
+            <span>我的</span>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 企业微信 JS-SDK 配置与初始化
+        // ==========================================
+
+        // 后端接口地址（需替换为实际域名）
+        const API_BASE = 'https://your-domain.com/api';
+
+        // 1. 从后端获取 JS-SDK 配置
+        function initWxConfig() {
+            // 实际使用时，通过 AJAX 请求后端获取签名
+            // fetch(API_BASE + '/wx-config?url=' + encodeURIComponent(location.href.split('#')[0]))
+            //     .then(res => res.json())
+            //     .then(config => {
+            //         wx.config({
+            //             beta: true,
+            //             debug: false,
+            //             appId: config.appId,
+            //             timestamp: config.timestamp,
+            //             nonceStr: config.nonceStr,
+            //             signature: config.signature,
+            //             jsApiList: [
+            //                 'scanQRCode',
+            //                 'getLocation',
+            //                 'openDefaultBrowser',
+            //                 'invoke',
+            //                 'openEnterpriseChat',
+            //                 'selectExternalContact',
+            //                 'openUserProfile'
+            //             ]
+            //         });
+            //     });
+
+            // 模拟配置（实际使用时删除）
+            console.log('企业微信 JS-SDK 待配置');
+        }
+
+        // 2. JS-SDK 就绪回调
+        wx.ready(function() {
+            console.log('企业微信 JS-SDK 已就绪');
+            // 获取用户信息
+            getUserInfo();
+        });
+
+        wx.error(function(res) {
+            console.error('企业微信 JS-SDK 配置失败:', res);
+        });
+
+        // ==========================================
+        // 业务功能函数
+        // ==========================================
+
+        // 打开应用（支持企业微信原生跳转和浏览器跳转）
+        function openApp(url) {
+            if (typeof wx !== 'undefined' && wx.invoke) {
+                // 企业微信环境：使用原生能力
+                wx.invoke('openDefaultBrowser', {
+                    url: url
+                }, function(res) {
+                    if (res.err_msg !== 'openDefaultBrowser:ok') {
+                        // 降级处理：直接跳转
+                        window.location.href = url;
+                    }
+                });
+            } else {
+                // 浏览器环境：直接跳转
+                window.location.href = url;
+            }
+        }
+
+        // 打开待办详情
+        function openTodo(url) {
+            openApp(url);
+        }
+
+        // 切换底部导航
+        function switchTab(el, tab) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            el.classList.add('active');
+
+            // 实际使用时切换页面内容
+            console.log('切换到:', tab);
+        }
+
+        // 获取用户信息（通过企业微信接口）
+        function getUserInfo() {
+            // 实际使用时调用后端接口获取当前登录用户信息
+            // fetch(API_BASE + '/user/info')
+            //     .then(res => res.json())
+            //     .then(data => {
+            //         document.getElementById('userName').textContent = data.name;
+            //         document.getElementById('userDept').textContent = data.dept;
+            //         document.getElementById('userAvatar').textContent = data.name.charAt(0);
+            //     });
+        }
+
+        // 加载数据
+        function loadData() {
+            showLoading(true);
+
+            // 模拟异步加载
+            setTimeout(() => {
+                // 实际使用时从后端获取真实数据
+                // fetch(API_BASE + '/dashboard')
+                //     .then(res => res.json())
+                //     .then(data => {
+                //         updateUI(data);
+                //         showLoading(false);
+                //     });
+
+                showLoading(false);
+            }, 500);
+        }
+
+        // 更新UI数据
+        function updateUI(data) {
+            document.getElementById('todoCount').textContent = data.todoCount || 0;
+            document.getElementById('msgCount').textContent = data.msgCount || 0;
+            document.getElementById('approvalCount').textContent = data.approvalCount || 0;
+            document.getElementById('noticeText').textContent = data.notice || '';
+
+            // 更新角标
+            if (data.badgeApproval) {
+                document.getElementById('badgeApproval').textContent = data.badgeApproval;
+            }
+            if (data.badgeExpense) {
+                document.getElementById('badgeExpense').textContent = data.badgeExpense;
+            }
+            if (data.badgeMail) {
+                document.getElementById('badgeMail').textContent = data.badgeMail;
+            }
+        }
+
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // ==========================================
+        // 页面初始化
+        // ==========================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化企业微信配置
+            initWxConfig();
+
+            // 加载页面数据
+            loadData();
+
+            // 监听页面可见性变化，重新加载数据
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    loadData();
+                }
+            });
+        });
+
+        // 防止iOS橡皮筋效果
+        document.body.addEventListener('touchmove', function(e) {
+            if (e.target.closest('.bottom-nav')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
